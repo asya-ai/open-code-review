@@ -673,6 +673,28 @@ function testConfigureNeutralizesStaleProviderAndStaticToken() {
   }
 }
 
+function testConfigureProtocolOverride() {
+  const configure = stepNamed("Configure OCR");
+  assert.ok(configure, "action.yml must retain the Configure OCR step");
+  const fixture = makeFixture();
+  try {
+    const values = inputValues({
+      llm_url: "https://api.openai.com/v1",
+      llm_model: "gpt-5.6-terra",
+      llm_use_anthropic: "false",
+      llm_protocol: "openai-responses",
+      llm_auth_token: "protocol-token-sentinel",
+    });
+    const result = runStep(configure, values, fixture);
+    assert.strictEqual(result.status, 0, `Configure OCR failed; ${resultDescription(result)}`);
+    const configured = configValues(configOperations(fixture));
+    assert.strictEqual(configured["llm.use_anthropic"], "false");
+    assert.strictEqual(configured["llm.protocol"], "openai-responses");
+  } finally {
+    removeFixture(fixture);
+  }
+}
+
 function testConfigureProtocolTracksUseAnthropic() {
   const configure = stepNamed("Configure OCR");
   assert.ok(configure, "action.yml must retain the Configure OCR step");
@@ -1101,6 +1123,7 @@ const TESTS = [
   ["Configure OCR never persists the token", testConfigureNeverPersistsToken],
   ["Configure OCR neutralizes stale provider and static token", testConfigureNeutralizesStaleProviderAndStaticToken],
   ["Configure OCR sets a protocol consistent with use_anthropic", testConfigureProtocolTracksUseAnthropic],
+  ["Configure OCR honors llm_protocol over llm_use_anthropic", testConfigureProtocolOverride],
   ["Configure OCR preserves legacy use_anthropic resolution", testConfigurePreservesLegacyUseAnthropicResolution],
   ["Configure OCR clears stale persisted extra headers", testConfigureClearsStaleExtraHeadersBeforeTokenCommand],
   ["Configure OCR clears stale persisted retry codes", testConfigureClearsStaleRetryCodesBeforeEndpointConfig],

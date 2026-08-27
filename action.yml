@@ -24,6 +24,14 @@ inputs:
       case-insensitively; every other value selects the OpenAI-compatible
       protocol, preserving the CLI environment contract.
     required: true
+  llm_protocol:
+    description: >-
+      LLM protocol written to llm.protocol (anthropic, openai, or openai-responses).
+      When empty, derived from llm_use_anthropic (true → anthropic, false → openai).
+      OCR v1.10+ prefers config-file protocol over OCR_LLM_PROTOCOL, so this must
+      be set here rather than only as a caller env var.
+    required: false
+    default: ''
   llm_auth_header:
     description: Custom auth header name (mapped to env OCR_LLM_AUTH_HEADER).
     required: false
@@ -380,6 +388,7 @@ runs:
         OCR_LLM_URL: ${{ inputs.llm_url }}
         OCR_LLM_MODEL: ${{ inputs.llm_model }}
         OCR_USE_ANTHROPIC: ${{ inputs.llm_use_anthropic }}
+        OCR_LLM_PROTOCOL_INPUT: ${{ inputs.llm_protocol }}
         OCR_LLM_AUTH_HEADER: ${{ inputs.llm_auth_header }}
         OCR_EXTRA_BODY: ${{ inputs.llm_extra_body }}
         OCR_LANGUAGE: ${{ inputs.language }}
@@ -396,6 +405,9 @@ runs:
             OCR_LLM_PROTOCOL="openai"
             ;;
         esac
+        if [ -n "${OCR_LLM_PROTOCOL_INPUT:-}" ]; then
+          OCR_LLM_PROTOCOL="$OCR_LLM_PROTOCOL_INPUT"
+        fi
         ocr config unset provider
         ocr config set llm.auth_token ""
         ocr config set llm.extra_headers ""
