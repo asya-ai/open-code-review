@@ -422,9 +422,21 @@ runs:
       env:
         PR_NUM: ${{ env.PR_NUMBER }}
       run: |
-        if [ -n "$PR_NUM" ]; then
-          git fetch origin "pull/${PR_NUM}/head"
+        # Checkout base uses fetch-depth: 0, so same-repo PR commits are often
+        # already present. GitHub can advertise refs/pull/N/merge without
+        # refs/pull/N/head; a missing pull ref is then a fallback, not a failure.
+        if git cat-file -e "${HEAD_SHA}^{commit}" 2>/dev/null; then
+          echo "PR head ${HEAD_SHA} already present"
+          exit 0
         fi
+        fetched=1
+        if [ -n "$PR_NUM" ]; then
+          git fetch origin "+refs/pull/${PR_NUM}/head:refs/remotes/pull/${PR_NUM}/head" && fetched=0 || fetched=1
+        fi
+        if [ "$fetched" -ne 0 ]; then
+          git fetch origin "${HEAD_SHA}"
+        fi
+        git cat-file -e "${HEAD_SHA}^{commit}"
 
     - name: Compute merge-base
       shell: bash
